@@ -6,5 +6,6 @@ function love.conf(t)
     t.window.fullscreen = true
     t.window.title = "FOR RESEARCH PURPOSES ONLY"
     t.window.fullscreentype = "exclusive"
+    t.window.msaa = 0
 end
 love.graphics.setDefaultFilter("nearest", "nearest")

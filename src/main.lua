@@ -2,33 +2,35 @@ if os.getenv("LOCAL_LUA_DEBUGGER_VSCODE") == "1" then
   require("lldebugger").start()
 end
 
-local fftSize = 512
-local hopSize = fftSize / 4
-local fftArray = {}
-local sampleBuffer = {}
-local sampleBufferCount = 0
+GLOBAL = {FFT = {}}
+GLOBAL.FFT.size = 512
+GLOBAL.FFT.result = {}
+GLOBAL.amplitude = 100
+local hopSize = GLOBAL.FFT.size / 4
+local sample_buffer = {}
+local sample_buffer_count = 0
 
 local devices = love.audio.getRecordingDevices()
-local recordingDevice = devices[1]
-local success = recordingDevice:start(fftSize)
+local recording_device = devices[1]
+local success = recording_device:start(GLOBAL.FFT.size)
 
 local loveFFT = require("lovefft")
-loveFFT:init(fftSize)
+loveFFT:init(GLOBAL.FFT.size)
 
-local amplitude = 50
+local current_screen = require("screens.bars")
 
 function love.resize()
-    W, H = love.graphics.getDimensions()
+    GLOBAL.screen_width, GLOBAL.screen_height = love.graphics.getDimensions()
 end
 love.resize()
 
 function love.update(dt)
-    local newArray, updated = loveFFT:get()
+    local newResult, updated = loveFFT:get()
     if updated then
-        fftArray = newArray
+        GLOBAL.FFT.result = newResult
     end
 
-    local streamData = recordingDevice:getData()
+    local streamData = recording_device:getData()
     if streamData == nil then return end
 
     local count = streamData:getSampleCount()
@@ -39,33 +41,29 @@ function love.update(dt)
         for c = 1, channels do
             s = s + streamData:getSample(i, c)
         end
-        sampleBufferCount = sampleBufferCount + 1
-        sampleBuffer[sampleBufferCount] = s
+        sample_buffer_count = sample_buffer_count + 1
+        sample_buffer[sample_buffer_count] = s
     end
 
-    if sampleBufferCount >= fftSize then
-        local windowData = love.sound.newSoundData(fftSize, streamData:getSampleRate(), streamData:getBitDepth(), 1)
-        for i = 1, fftSize do
-            windowData:setSample(i - 1, sampleBuffer[i])
+    if sample_buffer_count >= GLOBAL.FFT.size then
+        local windowData = love.sound.newSoundData(GLOBAL.FFT.size, streamData:getSampleRate(), streamData:getBitDepth(), 1)
+        for i = 1, GLOBAL.FFT.size do
+            windowData:setSample(i - 1, sample_buffer[i])
         end
         loveFFT:setSoundData(windowData)
         loveFFT:updatePlayTime(0)
 
-        local remaining = sampleBufferCount - hopSize
+        local remaining = sample_buffer_count - hopSize
         for i = 1, remaining do
-            sampleBuffer[i] = sampleBuffer[hopSize + i]
+            sample_buffer[i] = sample_buffer[hopSize + i]
         end
-        sampleBufferCount = remaining
+        sample_buffer_count = remaining
     end
 end
 
 function love.draw()
-    local barWidth = W / fftSize * 8
-    for i = 1, fftSize/8 do
-        local barHeight = (fftArray[i] or 0) * H * amplitude
-        love.graphics.rectangle("fill", (i - 1) * barWidth, H - barHeight, barWidth, barHeight)
-    end
-    love.graphics.print(tostring("FOR RESEARCH PURPOSES ONLY: "..recordingDevice:getName().." "..love.timer.getFPS()), 0, 0)
+    current_screen.draw()
+    love.graphics.print(tostring("FOR RESEARCH PURPOSES ONLY: "..recording_device:getName().." "..love.timer.getFPS()), 0, 0)
 end
 
 function love.keypressed(key)

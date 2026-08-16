@@ -2,13 +2,18 @@ if os.getenv("LOCAL_LUA_DEBUGGER_VSCODE") == "1" then
   require("lldebugger").start()
 end
 
-GLOBAL = {FFT = {}}
+GLOBAL = {FFT={},sample={},transient={}}
 GLOBAL.FFT.size = 512
 GLOBAL.FFT.result = {}
-GLOBAL.amplitude = 200
+GLOBAL.amplitude = 100
+GLOBAL.transient.threshold = 1
+GLOBAL.transient.triggered = false
+GLOBAL.beat.tempo = 120
+GLOBAL.beat.division = 4
+GLOBAL.beat.triggered = false
 local hopSize = GLOBAL.FFT.size / 4
-local sample_buffer = {}
-local sample_buffer_count = 0
+GLOBAL.sample.buffer = {}
+GLOBAL.sample.buffer_count = 0
 
 local devices = love.audio.getRecordingDevices()
 local recording_device = devices[1]
@@ -19,7 +24,8 @@ loveFFT:init(GLOBAL.FFT.size)
 
 local screens = {
     bars = require("screens.bars"),
-    spec = require("screens.spec")
+    spec = require("screens.spec"),
+    osc = require("screens.osc")
 }
 local current_screen = screens.bars
 
@@ -45,40 +51,72 @@ function love.update(dt)
         for c = 1, channels do
             s = s + streamData:getSample(i, c)
         end
-        sample_buffer_count = sample_buffer_count + 1
-        sample_buffer[sample_buffer_count] = s
+        GLOBAL.sample.buffer_count = GLOBAL.sample.buffer_count + 1
+        GLOBAL.sample.buffer[GLOBAL.sample.buffer_count] = s
     end
 
-    if sample_buffer_count >= GLOBAL.FFT.size then
+    if GLOBAL.sample.buffer_count >= GLOBAL.FFT.size then
         local windowData = love.sound.newSoundData(GLOBAL.FFT.size, streamData:getSampleRate(), streamData:getBitDepth(), 1)
         for i = 1, GLOBAL.FFT.size do
-            windowData:setSample(i - 1, sample_buffer[i])
+            windowData:setSample(i - 1, GLOBAL.sample.buffer[i])
         end
         loveFFT:setSoundData(windowData)
         loveFFT:updatePlayTime(0)
 
-        local remaining = sample_buffer_count - hopSize
+        local remaining = GLOBAL.sample.buffer_count - hopSize
         for i = 1, remaining do
-            sample_buffer[i] = sample_buffer[hopSize + i]
+            GLOBAL.sample.buffer[i] = GLOBAL.sample.buffer[hopSize + i]
         end
-        sample_buffer_count = remaining
+        GLOBAL.sample.buffer_count = remaining
     end
 end
 
 function love.draw()
     current_screen.draw()
-    love.graphics.print(tostring("FOR RESEARCH PURPOSES ONLY: "..recording_device:getName().." "..love.timer.getFPS()), 0, 0)
+    love.graphics.print(tostring("FOR RESEARCH PURPOSES ONLY. DEVICE: "..recording_device:getName().." AMPLITUDE: "..GLOBAL.amplitude.." TRANSIENT THRESH: "..GLOBAL.transient.threshold.." TEMPO: "..GLOBAL.beat.tempo.." FPS: "..love.timer.getFPS()), 0, 0)
 end
 
 function love.keypressed(key)
+    if key == "t" then
+        GLOBAL.beat.tempo = nil
+    end
+    local shift_held = love.keyboard.isDown("lshift") or love.keyboard.isDown("rshift")
+    local tempo_held = love.keyboard.isDown("t") 
     if key == "escape" then
         love.event.quit()
     end
 
+    if key == "up" then
+        if shift_held then
+            GLOBAL.transient.threshold = GLOBAL.transient.threshold+0.1
+        elseif tempo_held then
+            GLOBAL.beat.tempo = GLOBAL.beat.tempo+5
+        else
+            GLOBAL.amplitude = GLOBAL.amplitude*2
+        end
+    end
+    if key == "down" then
+                if shift_held then
+            GLOBAL.transient.threshold = GLOBAL.transient.threshold-0.1
+        elseif tempo_held then
+            GLOBAL.beat.tempo = GLOBAL.beat.tempo-5
+        else
+            GLOBAL.amplitude = GLOBAL.amplitude/2
+        end
+    end
     if key == "left" then
-        current_screen = screens.bars
+        current_screen = screens.osc
     end
     if key == "right" then
         current_screen = screens.spec
+    end
+
+    
+end
+
+function love.keyreleased(key)
+    local tempo_released = key == "t"
+    if tempo_released then 
+        GLOBAL.beat.triggered = true
     end
 end

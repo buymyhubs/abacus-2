@@ -1,6 +1,7 @@
 local scope = {}
 
 function scope.draw()
+    love.graphics.setLineWidth(3)
     local points = {}
     love.graphics.push()
     love.graphics.scale(2,2)

@@ -2,7 +2,7 @@ if os.getenv("LOCAL_LUA_DEBUGGER_VSCODE") == "1" then
   require("lldebugger").start()
 end
 
-GLOBAL = {FFT={},sample={},transient={}}
+GLOBAL = {FFT={},sample={},transient={},beat={}}
 GLOBAL.FFT.size = 512
 GLOBAL.FFT.result = {}
 GLOBAL.amplitude = 100
@@ -11,6 +11,7 @@ GLOBAL.transient.triggered = false
 GLOBAL.beat.tempo = 120
 GLOBAL.beat.division = 4
 GLOBAL.beat.triggered = false
+GLOBAL.beat.playing = false
 local hopSize = GLOBAL.FFT.size / 4
 GLOBAL.sample.buffer = {}
 GLOBAL.sample.buffer_count = 0
@@ -77,9 +78,6 @@ function love.draw()
 end
 
 function love.keypressed(key)
-    if key == "t" then
-        GLOBAL.beat.tempo = nil
-    end
     local shift_held = love.keyboard.isDown("lshift") or love.keyboard.isDown("rshift")
     local tempo_held = love.keyboard.isDown("t") 
     if key == "escape" then
@@ -96,7 +94,7 @@ function love.keypressed(key)
         end
     end
     if key == "down" then
-                if shift_held then
+        if shift_held then
             GLOBAL.transient.threshold = GLOBAL.transient.threshold-0.1
         elseif tempo_held then
             GLOBAL.beat.tempo = GLOBAL.beat.tempo-5
@@ -111,7 +109,9 @@ function love.keypressed(key)
         current_screen = screens.spec
     end
 
-    
+    if key == "space" then
+        GLOBAL.beat.playing = not GLOBAL.beat.playing
+    end
 end
 
 function love.keyreleased(key)

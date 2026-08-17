@@ -27,7 +27,8 @@ local function set_recording_device(index)
     recording_device = recording_devices[recording_device_index]
     local success = recording_device:start(GLOBAL.FFT.size)
 end
-local window_data = love.sound.newSoundData(GLOBAL.FFT.size, 8000, 16, 1)
+set_recording_device(recording_device_index)
+local window_data = love.sound.newSoundData(GLOBAL.FFT.size, 44100, 16, 1)
 
 local loveFFT = require("lovefft")
 loveFFT:init(GLOBAL.FFT.size)

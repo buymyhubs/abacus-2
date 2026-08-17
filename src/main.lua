@@ -12,13 +12,22 @@ GLOBAL.beat.tempo = 120
 GLOBAL.beat.division = 4
 GLOBAL.beat.triggered = false
 GLOBAL.beat.playing = false
-local hopSize = GLOBAL.FFT.size / 4
+local hop_size = GLOBAL.FFT.size / 4
 GLOBAL.sample.buffer = {}
 GLOBAL.sample.buffer_count = 0
 
-local devices = love.audio.getRecordingDevices()
-local recording_device = devices[1]
-local success = recording_device:start(GLOBAL.FFT.size)
+local recording_devices = love.audio.getRecordingDevices()
+local recording_device_index = 1
+local recording_device_count = #recording_devices
+local recording_device = recording_devices[recording_device_index]
+local function set_recording_device(index)
+    if index == nil or index < 1 or index > recording_device_count then return end
+    recording_device_index = index
+    recording_device:stop()
+    recording_device = recording_devices[recording_device_index]
+    local success = recording_device:start(GLOBAL.FFT.size)
+end
+local window_data = love.sound.newSoundData(GLOBAL.FFT.size, 8000, 16, 1)
 
 local loveFFT = require("lovefft")
 loveFFT:init(GLOBAL.FFT.size)
@@ -90,16 +99,16 @@ function love.update(dt)
     end
 
     if GLOBAL.sample.buffer_count >= GLOBAL.FFT.size then
-        local windowData = love.sound.newSoundData(GLOBAL.FFT.size, stream_data:getSampleRate(), stream_data:getBitDepth(), 1)
+        -- window_data
         for i = 1, GLOBAL.FFT.size do
-            windowData:setSample(i - 1, GLOBAL.sample.buffer[i])
+            window_data:setSample(i - 1, GLOBAL.sample.buffer[i])
         end
-        loveFFT:setSoundData(windowData)
+        loveFFT:setSoundData(window_data)
         loveFFT:updatePlayTime(0)
 
-        local remaining = GLOBAL.sample.buffer_count - hopSize
+        local remaining = GLOBAL.sample.buffer_count - hop_size
         for i = 1, remaining do
-            GLOBAL.sample.buffer[i] = GLOBAL.sample.buffer[hopSize + i]
+            GLOBAL.sample.buffer[i] = GLOBAL.sample.buffer[hop_size + i]
         end
         GLOBAL.sample.buffer_count = remaining
     end
@@ -158,6 +167,13 @@ function love.keypressed(key)
 
     if key == "space" then
         GLOBAL.beat.playing = not GLOBAL.beat.playing
+    end
+
+    if key == "[" then
+        set_recording_device(recording_device_index-1)
+    end
+    if key == "]" then
+        set_recording_device(recording_device_index+1)
     end
 end
 

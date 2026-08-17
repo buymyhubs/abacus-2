@@ -105,7 +105,7 @@ function love.update(dt)
             GLOBAL.sample.buffer[i] = GLOBAL.sample.buffer[excess + i]
         end
         GLOBAL.sample.buffer_count = GLOBAL.FFT.size
-        print("buffer overflow at "..love.timer.getTime())
+        print("audio buffer overflow at "..love.timer.getTime())
     end
 
     while GLOBAL.sample.buffer_count >= GLOBAL.FFT.size do

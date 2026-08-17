@@ -3,7 +3,7 @@ if os.getenv("LOCAL_LUA_DEBUGGER_VSCODE") == "1" then
 end
 
 GLOBAL = {FFT={},sample={},transient={},beat={}}
-GLOBAL.FFT.size = 512
+GLOBAL.FFT.size = 256
 GLOBAL.FFT.result = {}
 GLOBAL.amplitude = 100
 GLOBAL.transient.threshold = 1

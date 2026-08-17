@@ -38,7 +38,8 @@ loveFFT:init(GLOBAL.FFT.size)
 local screens = {
     bars = require("screens.bars"),
     spec = require("screens.spec"),
-    osc = require("screens.osc")
+    osc = require("screens.osc"),
+    boxes = require("screens.boxes")
 }
 local current_screen = screens.bars
 
@@ -174,11 +175,17 @@ function love.keypressed(key)
             GLOBAL.amplitude = GLOBAL.amplitude/2
         end
     end
-    if key == "left" then
+    if key == "0" then
         current_screen = screens.osc
     end
-    if key == "right" then
+    if key == "1" then
         current_screen = screens.spec
+    end
+    if key == "2" then
+        current_screen = screens.bars
+    end
+    if key == "3" then
+        current_screen = screens.boxes
     end
 
     if key == "space" then

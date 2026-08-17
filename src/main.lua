@@ -30,11 +30,25 @@ local screens = {
 }
 local current_screen = screens.bars
 
+local canvas
 function love.resize()
+    canvas = love.graphics.newCanvas(GLOBAL.screen_width, GLOBAL.screen_height)
     GLOBAL.screen_width, GLOBAL.screen_height = love.graphics.getDimensions()
 end
 love.resize()
-
+local color_shader = love.graphics.newShader [[
+        uniform vec4 color_A;
+        uniform vec4 color_B;
+        vec4 effect(vec4 color, Image texture, vec2 texture_coords, vec2 pixel_coords)
+        {
+            vec4 texturecolor = Texel(texture, texture_coords);
+            float lum = texturecolor.r;
+            vec4 mapped = mix(color_B, color_A, lum);
+            return mapped * color;
+        }
+    ]]
+color_shader:sendColor("color_A", {1, 0.5, 1, 1})
+color_shader:sendColor("color_B", {0, 0, 1, 1})
 local time_since_beat = 0
 local time_per_beat = 0
 local function set_tempo(new_tempo)
@@ -60,23 +74,23 @@ function love.update(dt)
         GLOBAL.FFT.result = newResult
     end
 
-    local streamData = recording_device:getData()
-    if streamData == nil then return end
+    local stream_data = recording_device:getData()
+    if stream_data == nil then return end
 
-    local count = streamData:getSampleCount()
-    local channels = streamData:getChannelCount()
+    local count = stream_data:getSampleCount()
+    local channels = stream_data:getChannelCount()
 
     for i = 0, count - 1 do
         local s = 0
         for c = 1, channels do
-            s = s + streamData:getSample(i, c)
+            s = s + stream_data:getSample(i, c)
         end
         GLOBAL.sample.buffer_count = GLOBAL.sample.buffer_count + 1
         GLOBAL.sample.buffer[GLOBAL.sample.buffer_count] = s
     end
 
     if GLOBAL.sample.buffer_count >= GLOBAL.FFT.size then
-        local windowData = love.sound.newSoundData(GLOBAL.FFT.size, streamData:getSampleRate(), streamData:getBitDepth(), 1)
+        local windowData = love.sound.newSoundData(GLOBAL.FFT.size, stream_data:getSampleRate(), stream_data:getBitDepth(), 1)
         for i = 1, GLOBAL.FFT.size do
             windowData:setSample(i - 1, GLOBAL.sample.buffer[i])
         end
@@ -100,7 +114,13 @@ local function bool_to_string(bool)
 end
 
 function love.draw()
-    current_screen.draw()
+    love.graphics.setCanvas(canvas)
+        love.graphics.clear(0, 0, 0, 1)
+        current_screen.draw()
+    love.graphics.setCanvas()
+    love.graphics.setShader(color_shader)
+    love.graphics.draw(canvas)
+    love.graphics.setShader()
     love.graphics.print(tostring("FOR RESEARCH PURPOSES ONLY. DEVICE: "..recording_device:getName().." AMPLITUDE: "..GLOBAL.amplitude.." BEAT TRIGGERED: "..bool_to_string(GLOBAL.beat.triggered).." TEMPO: "..GLOBAL.beat.tempo.." FPS: "..love.timer.getFPS()), 0, 0)
 end
 

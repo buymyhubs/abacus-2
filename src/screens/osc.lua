@@ -1,7 +1,7 @@
 local osc = {}
 
 function osc.draw()
-    love.graphics.setLineWidth(3)
+    love.graphics.setLineWidth(30)
     love.graphics.push()
     love.graphics.translate(0, GLOBAL.screen_height / 2)
 

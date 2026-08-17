@@ -35,6 +35,8 @@ local window_data = love.sound.newSoundData(GLOBAL.FFT.size, 44100, 16, 1)
 local loveFFT = require("lovefft")
 loveFFT:init(GLOBAL.FFT.size)
 
+local colors = require("colors")
+
 local screens = {
     bars = require("screens.bars"),
     spec = require("screens.spec"),
@@ -60,8 +62,15 @@ local color_shader = love.graphics.newShader [[
             return mapped * color;
         }
     ]]
-color_shader:sendColor("color_A", {1, 1, 1, 1})
-color_shader:sendColor("color_B", {0, 0, 0, 1})
+
+local color_A = colors.white
+local color_B = colors.black
+local function update_colors()
+    color_shader:sendColor("color_A", color_A)
+    color_shader:sendColor("color_B", color_B)
+end
+update_colors()
+
 local time_since_beat = 0
 local time_per_beat = 0
 local function set_tempo(new_tempo)
@@ -197,6 +206,14 @@ function love.keypressed(key)
     end
     if key == "]" then
         set_recording_device(recording_device_index+1)
+    end
+
+    if key == "i" then
+        local old_color_A = color_A
+        local old_color_B = color_B
+        color_A = old_color_B
+        color_B = old_color_A
+        update_colors()
     end
 end
 

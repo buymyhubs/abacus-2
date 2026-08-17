@@ -12,7 +12,7 @@ GLOBAL.beat.tempo = 120
 GLOBAL.beat.division = 4
 GLOBAL.beat.triggered = false
 GLOBAL.beat.playing = false
-local hop_size = GLOBAL.FFT.size / 4
+local hop_size = GLOBAL.FFT.size / 2
 GLOBAL.sample.buffer = {}
 GLOBAL.sample.buffer_count = 0
 
@@ -28,7 +28,7 @@ local function set_recording_device(index)
     local success = recording_device:start(GLOBAL.FFT.size)
 end
 set_recording_device(recording_device_index)
-local window_data = love.sound.newSoundData(GLOBAL.FFT.size, 8000, 16, 1)
+local window_data = love.sound.newSoundData(GLOBAL.FFT.size, 44100, 16, 1)
 
 local loveFFT = require("lovefft")
 loveFFT:init(GLOBAL.FFT.size)

@@ -59,8 +59,8 @@ local color_shader = love.graphics.newShader [[
             return mapped * color;
         }
     ]]
-color_shader:sendColor("color_A", {1, 0.5, 1, 1})
-color_shader:sendColor("color_B", {0, 0, 1, 1})
+color_shader:sendColor("color_A", {1, 1, 1, 1})
+color_shader:sendColor("color_B", {0, 0, 0, 1})
 local time_since_beat = 0
 local time_per_beat = 0
 local function set_tempo(new_tempo)

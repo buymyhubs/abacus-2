@@ -3,7 +3,7 @@ if os.getenv("LOCAL_LUA_DEBUGGER_VSCODE") == "1" then
 end
 
 GLOBAL = {FFT={},sample={},transient={},beat={}}
-GLOBAL.FFT.size = 256
+GLOBAL.FFT.size = 512
 GLOBAL.FFT.result = {}
 GLOBAL.amplitude = 100
 GLOBAL.transient.threshold = 1
@@ -12,7 +12,7 @@ GLOBAL.beat.tempo = 120
 GLOBAL.beat.division = 4
 GLOBAL.beat.triggered = false
 GLOBAL.beat.playing = false
-local hop_size = GLOBAL.FFT.size
+local hop_size = GLOBAL.FFT.size/2
 GLOBAL.sample.buffer = {}
 GLOBAL.sample.buffer_count = 0
 
@@ -97,6 +97,15 @@ function love.update(dt)
         end
         GLOBAL.sample.buffer_count = GLOBAL.sample.buffer_count + 1
         GLOBAL.sample.buffer[GLOBAL.sample.buffer_count] = s
+    end
+
+    if GLOBAL.sample.buffer_count > GLOBAL.FFT.size then
+        local excess = GLOBAL.sample.buffer_count - GLOBAL.FFT.size
+        for i = 1, GLOBAL.FFT.size do
+            GLOBAL.sample.buffer[i] = GLOBAL.sample.buffer[excess + i]
+        end
+        GLOBAL.sample.buffer_count = GLOBAL.FFT.size
+        print("buffer overflow at "..love.timer.getTime())
     end
 
     while GLOBAL.sample.buffer_count >= GLOBAL.FFT.size do

@@ -12,7 +12,7 @@ GLOBAL.beat.tempo = 120
 GLOBAL.beat.division = 4
 GLOBAL.beat.triggered = false
 GLOBAL.beat.playing = false
-local hop_size = GLOBAL.FFT.size / 2
+local hop_size = GLOBAL.FFT.size
 GLOBAL.sample.buffer = {}
 GLOBAL.sample.buffer_count = 0
 

@@ -1,9 +1,11 @@
+local debug_mode = false
 if os.getenv("LOCAL_LUA_DEBUGGER_VSCODE") == "1" then
   require("lldebugger").start()
+  debug_mode = true
 end
 
 GLOBAL = {FFT={},sample={},transient={},beat={}}
-GLOBAL.FFT.size = 512
+GLOBAL.FFT.size = 1024
 GLOBAL.FFT.result = {}
 GLOBAL.amplitude = 100
 GLOBAL.transient.threshold = 1
@@ -12,7 +14,7 @@ GLOBAL.beat.tempo = 120
 GLOBAL.beat.division = 4
 GLOBAL.beat.triggered = false
 GLOBAL.beat.playing = false
-local hop_size = GLOBAL.FFT.size/2
+local hop_size = GLOBAL.FFT.size/8
 GLOBAL.sample.buffer = {}
 GLOBAL.sample.buffer_count = 0
 
@@ -105,7 +107,9 @@ function love.update(dt)
             GLOBAL.sample.buffer[i] = GLOBAL.sample.buffer[excess + i]
         end
         GLOBAL.sample.buffer_count = GLOBAL.FFT.size
-        print("audio buffer overflow at "..love.timer.getTime()..". discarding "..excess.." samples.")
+        if debug_mode then
+            print("audio buffer overflow at "..love.timer.getTime()..". discarding "..excess.." samples.")
+        end
     end
 
     while GLOBAL.sample.buffer_count >= GLOBAL.FFT.size do
@@ -120,6 +124,9 @@ function love.update(dt)
             GLOBAL.sample.buffer[i] = GLOBAL.sample.buffer[hop_size + i]
         end
         GLOBAL.sample.buffer_count = remaining
+    end
+    if love.timer.getTime() % 5 < dt then
+        print("collecting garbage:", collectgarbage("count"))
     end
 end
 

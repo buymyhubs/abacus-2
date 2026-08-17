@@ -99,8 +99,7 @@ function love.update(dt)
         GLOBAL.sample.buffer[GLOBAL.sample.buffer_count] = s
     end
 
-    if GLOBAL.sample.buffer_count >= GLOBAL.FFT.size then
-        -- window_data
+    while GLOBAL.sample.buffer_count >= GLOBAL.FFT.size do
         for i = 1, GLOBAL.FFT.size do
             window_data:setSample(i - 1, GLOBAL.sample.buffer[i])
         end

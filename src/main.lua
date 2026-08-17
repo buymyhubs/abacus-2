@@ -35,7 +35,26 @@ function love.resize()
 end
 love.resize()
 
+local time_since_beat = 0
+local time_per_beat = 0
+local function set_tempo(new_tempo)
+    GLOBAL.beat.triggered = true
+    time_since_beat = 0
+    time_per_beat = GLOBAL.beat.tempo/60/GLOBAL.beat.division
+end
+set_tempo()
 function love.update(dt)
+    if GLOBAL.beat.triggered then
+        GLOBAL.beat.triggered = false
+    end
+    if GLOBAL.transient.triggered then
+        GLOBAL.beat.triggered = false
+    end
+    time_since_beat = time_since_beat + dt
+    if time_since_beat >= time_per_beat then
+        GLOBAL.beat.triggered = true
+        time_since_beat = time_since_beat - time_per_beat
+    end
     local newResult, updated = loveFFT:get()
     if updated then
         GLOBAL.FFT.result = newResult
@@ -72,9 +91,17 @@ function love.update(dt)
     end
 end
 
+local function bool_to_string(bool)
+    if bool then
+        return "true"
+    else
+        return "false"
+    end
+end
+
 function love.draw()
     current_screen.draw()
-    love.graphics.print(tostring("FOR RESEARCH PURPOSES ONLY. DEVICE: "..recording_device:getName().." AMPLITUDE: "..GLOBAL.amplitude.." TRANSIENT THRESH: "..GLOBAL.transient.threshold.." TEMPO: "..GLOBAL.beat.tempo.." FPS: "..love.timer.getFPS()), 0, 0)
+    love.graphics.print(tostring("FOR RESEARCH PURPOSES ONLY. DEVICE: "..recording_device:getName().." AMPLITUDE: "..GLOBAL.amplitude.." BEAT TRIGGERED: "..bool_to_string(GLOBAL.beat.triggered).." TEMPO: "..GLOBAL.beat.tempo.." FPS: "..love.timer.getFPS()), 0, 0)
 end
 
 function love.keypressed(key)
@@ -117,6 +144,6 @@ end
 function love.keyreleased(key)
     local tempo_released = key == "t"
     if tempo_released then 
-        GLOBAL.beat.triggered = true
+        set_tempo()
     end
 end

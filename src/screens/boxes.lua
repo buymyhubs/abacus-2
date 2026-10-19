@@ -16,7 +16,7 @@ function boxes.draw()
         love.graphics.setColor(level,level,level)
         love.graphics.rectangle("fill", (i - 1) * box_width, 0, box_width, GLOBAL.screen_height)
         love.graphics.setColor(1,1,1,1)
-        print(i.." "..level)
+        -- print(i.." "..level)
     end
 end
 

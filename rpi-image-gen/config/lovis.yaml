@@ -1,0 +1,12 @@
+device:
+  layer: rpi4
+  hostname: lovis
+
+image:
+  layer: image-rpios
+  name: lovis
+  boot_part_size: 256M
+  root_part_size: 2G
+
+layer:
+  app: lovis

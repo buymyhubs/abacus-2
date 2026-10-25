@@ -1,0 +1,36 @@
+#!/bin/sh
+export PATH=/usr/sbin:/usr/bin:/sbin:/bin
+
+mount -t proc proc /proc
+[ -e /dev/null ] || mount -t devtmpfs devtmpfs /dev
+
+fallback() {
+  echo "overlay-init: $1 -- booting without overlay" >&2
+  mount -o remount,rw / 2>/dev/null
+  exec /sbin/init
+}
+
+case " $(cat /proc/cmdline) " in
+  *" lovis.rw=1 "*) mount -o remount,rw /; exec /sbin/init ;;
+esac
+
+grep -qw overlay /proc/filesystems || modprobe overlay 2>/dev/null
+grep -qw overlay /proc/filesystems || fallback "no overlayfs support"
+
+mount -t tmpfs -o mode=0755 tmpfs /overlay                  || fallback "tmpfs failed"
+mkdir -p /overlay/lower /overlay/upper /overlay/work /overlay/merged
+mount --bind / /overlay/lower                                || fallback "bind failed"
+mount -t overlay overlay \
+  -o lowerdir=/overlay/lower,upperdir=/overlay/upper,workdir=/overlay/work \
+  /overlay/merged                                            || fallback "overlay mount failed"
+
+sed -i -e '\|^[^#].*[[:space:]]/[[:space:]]|d' \
+       -e '\|/boot/firmware|s/\(defaults,\)rw,/\1ro,nofail,x-systemd.device-timeout=5s,/' /overlay/merged/etc/fstab
+mkdir -p /overlay/merged/ro-root
+mountpoint -q /run && mount --move /run /overlay/merged/run 2>/dev/null
+mount --move /proc /overlay/merged/proc 2>/dev/null || mount -t proc proc /overlay/merged/proc
+mount --move /dev  /overlay/merged/dev
+
+cd /overlay/merged || fallback "cd failed"
+pivot_root . ro-root || fallback "pivot_root failed"
+exec /sbin/init

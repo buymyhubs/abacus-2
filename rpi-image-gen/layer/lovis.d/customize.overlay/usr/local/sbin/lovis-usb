@@ -1,0 +1,62 @@
+#!/bin/bash
+MNT=/mnt/usb
+ACTION=$1
+DEV=/dev/$2
+USB_SYNC=0
+SPLASH_HOLD=3
+ACTIVE=/run/lovis-active
+
+case "$ACTION" in
+start)
+  exec 9>/run/lovis-usb.lock
+  flock 9
+  if mountpoint -q "$MNT"; then
+    echo "$MNT already in use; ignoring $DEV"
+    exit 0
+  fi
+
+  fstype=$(blkid -o value -s TYPE "$DEV")
+  case "$fstype" in
+    vfat)  type=vfat;     opts="rw,noatime,flush,uid=0,gid=0,umask=000,iocharset=utf8" ;;
+    exfat) type=exfat;    opts="rw,noatime,uid=0,gid=0,umask=000" ;;
+    ntfs)  type=ntfs-3g;  opts="rw,noatime,uid=0,gid=0,umask=000" ;;
+    "")    echo "no filesystem on $DEV"; exit 0 ;;
+    *)     type=$fstype;  opts="rw,noatime" ;;
+  esac
+
+  [ "$USB_SYNC" = 1 ] && opts="$opts,sync"
+  mkdir -p "$MNT"
+  mount -t "$type" -o "$opts" "$DEV" "$MNT" || exit 1
+  chmod 0777 "$MNT" 2>/dev/null
+  exec 9>&-
+
+  cd "$MNT" || exit 1
+  if [ -f start.sh ]; then
+    touch "$ACTIVE"
+    systemctl stop getty@tty1.service
+    SPLASH=
+    if [ -f splash.png ]; then
+      fbi -T 1 -d /dev/fb0 -a -noverbose splash.png </dev/null >/dev/null 2>&1 &
+      SPLASH=1
+    fi
+    bash ./start.sh &
+    GAME=$!
+    if [ -n "$SPLASH" ]; then
+      sleep "$SPLASH_HOLD"
+      pkill -TERM -x fbi
+    fi
+    wait "$GAME"
+    rm -f "$ACTIVE"
+    systemctl start --no-block getty@tty1.service
+  fi
+  while :; do sleep 3600; done
+  ;;
+stop)
+  if [ "$(findmnt -n -o SOURCE "$MNT")" = "$DEV" ]; then
+    sync
+    umount -l "$MNT"
+    rm -f "$ACTIVE"
+    systemctl start --no-block getty@tty1.service
+  fi
+  ;;
+esac

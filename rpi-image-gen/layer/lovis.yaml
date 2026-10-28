@@ -1,0 +1,42 @@
+# METABEGIN
+# X-Env-Layer-Name: lovis
+# X-Env-Layer-Category: app
+# X-Env-Layer-Desc: for research purposes only
+# X-Env-Layer-Version: 1.0.0
+# X-Env-Layer-Requires: debian-trixie-arm64-multi,
+#  rpi-debian-trixie,
+#  rpi-essential-base,
+#  rpi-misc-skel,
+#  systemd-net-min
+# METAEND
+---
+mmdebstrap:
+  packages:
+    - love
+    - libdrm2
+    - libgbm1
+    - libegl1
+    - libgles2
+    - libegl-mesa0
+    - libgl1-mesa-dri
+    - alsa-utils
+    - fbi
+    - exfatprogs
+    - ntfs-3g
+    - dosfstools
+    - kmod
+  customize-hooks:
+    - mkdir -p $1/overlay $1/mnt/usb
+    - chmod 755 $1/usr/local/sbin/overlay-init $1/usr/local/sbin/lovis-usb
+    - touch $1/root/.hushlogin
+    - chroot $1 systemctl set-default multi-user.target
+    - chroot $1 systemctl enable getty@tty1.service
+    - >-
+      chroot $1 systemctl mask
+      systemd-networkd-wait-online.service systemd-remount-fs.service
+      keyboard-setup.service console-setup.service
+      NetworkManager.service wpa_supplicant.service ModemManager.service
+      avahi-daemon.service bluetooth.service hciuart.service triggerhappy.service
+      apt-daily.timer apt-daily-upgrade.timer man-db.timer dpkg-db-backup.timer
+      e2scrub_all.timer e2scrub_reap.service fstrim.timer
+      rpi-eeprom-update.service

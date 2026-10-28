@@ -3,7 +3,7 @@ if os.getenv("LOCAL_LUA_DEBUGGER_VSCODE") == "1" then
   require("lldebugger").start()
   debug_mode = true
 end
-
+math.randomseed(os.time())
 GLOBAL = {FFT={},sample={},transient={},beat={}}
 GLOBAL.FFT.size = 1024
 GLOBAL.FFT.result = {}
@@ -21,18 +21,21 @@ GLOBAL.sample.buffer_count = 0
 local recording_devices = love.audio.getRecordingDevices()
 local recording_device_index = 1
 local recording_device_count = #recording_devices
-local recording_device = recording_devices[recording_device_index]
+local recording = false
+local cap_ctl = love.thread.getChannel("cap_ctl")
+local viz = love.thread.getChannel("viz")
+local capture_thread = love.thread.newThread("capture.lua")
+capture_thread:start(44100, 2)
+
 local function set_recording_device(index)
     if index == nil or index < 1 or index > recording_device_count then return end
     recording_device_index = index
-    recording_device:stop()
-    recording_device = recording_devices[recording_device_index]
-    local success = recording_device:start(GLOBAL.FFT.size)
+    recording = false
+    cap_ctl:push(index)
 end
-set_recording_device(recording_device_index)
 local window_data = love.sound.newSoundData(GLOBAL.FFT.size, 44100, 16, 1)
 
-local loveFFT = require("lovefft")
+local loveFFT = require("lovefft-patch")
 loveFFT:init(GLOBAL.FFT.size)
 
 local colors = require("colors")
@@ -79,7 +82,11 @@ local function set_tempo(new_tempo)
     time_per_beat = GLOBAL.beat.tempo/60/GLOBAL.beat.division
 end
 set_tempo()
+local sure = false
+local keys_pressed = {}
 function love.update(dt)
+    sure = false
+    keys_pressed = {}
     if GLOBAL.beat.triggered then
         GLOBAL.beat.triggered = false
     end
@@ -96,19 +103,24 @@ function love.update(dt)
         GLOBAL.FFT.result = newResult
     end
 
-    local stream_data = recording_device:getData()
-    if stream_data == nil then return end
+    local err = capture_thread:getError()
+    if err then error(err) end
 
-    local count = stream_data:getSampleCount()
-    local channels = stream_data:getChannelCount()
+    local stream_data = viz:pop()
+    while stream_data do
+        local count = stream_data:getSampleCount()
+        local channels = stream_data:getChannelCount()
+        GLOBAL.sample.channels = channels
 
-    for i = 0, count - 1 do
-        local s = 0
-        for c = 1, channels do
-            s = s + stream_data:getSample(i, c)
+        for i = 0, count - 1 do
+            local s = 0
+            for c = 1, channels do
+                s = s + stream_data:getSample(i, c)
+            end
+            GLOBAL.sample.buffer_count = GLOBAL.sample.buffer_count + 1
+            GLOBAL.sample.buffer[GLOBAL.sample.buffer_count] = s / channels
         end
-        GLOBAL.sample.buffer_count = GLOBAL.sample.buffer_count + 1
-        GLOBAL.sample.buffer[GLOBAL.sample.buffer_count] = s
+        stream_data = viz:pop()
     end
 
     if GLOBAL.sample.buffer_count > GLOBAL.FFT.size then
@@ -136,7 +148,8 @@ function love.update(dt)
         GLOBAL.sample.buffer_count = remaining
     end
     if love.timer.getTime() % 5 < dt then
-        print("collecting garbage:", collectgarbage("count"))
+        local gc_count = collectgarbage()
+        if debug_mode then print("collecting garbage:", gc_count) end
     end
 end
 
@@ -156,70 +169,90 @@ function love.draw()
     love.graphics.setShader(color_shader)
     love.graphics.draw(canvas)
     love.graphics.setShader()
-    love.graphics.print(tostring("FOR RESEARCH PURPOSES ONLY. DEVICE: "..recording_device:getName().." AMPLITUDE: "..GLOBAL.amplitude.." BEAT TRIGGERED: "..bool_to_string(GLOBAL.beat.triggered).." TEMPO: "..GLOBAL.beat.tempo.." FPS: "..love.timer.getFPS()), 0, 0)
+    love.graphics.print(tostring("FOR RESEARCH PURPOSES ONLY. DEVICE: "..recording_devices[recording_device_index]:getName()..(GLOBAL.sample.channels == 2 and " STEREO" or " MONO")..(recording and " REC" or "").." AMPLITUDE: "..GLOBAL.amplitude.." BEAT TRIGGERED: "..bool_to_string(GLOBAL.beat.triggered).." TEMPO: "..GLOBAL.beat.tempo.." FPS: "..love.timer.getFPS()), 0, 0)
 end
 
-function love.keypressed(key)
-    local shift_held = love.keyboard.isDown("lshift") or love.keyboard.isDown("rshift")
-    local tempo_held = love.keyboard.isDown("t") 
-    if key == "escape" then
+local keymap = {
+    ["shift"] = function ()
+        sure = true
+    end,
+    ["escape"] = function ()
         love.event.quit()
-    end
-
-    if key == "up" then
-        if shift_held then
-            GLOBAL.transient.threshold = GLOBAL.transient.threshold+0.1
-        elseif tempo_held then
-            GLOBAL.beat.tempo = GLOBAL.beat.tempo+5
-        else
-            GLOBAL.amplitude = GLOBAL.amplitude*2
-        end
-    end
-    if key == "down" then
-        if shift_held then
-            GLOBAL.transient.threshold = GLOBAL.transient.threshold-0.1
-        elseif tempo_held then
-            GLOBAL.beat.tempo = GLOBAL.beat.tempo-5
-        else
-            GLOBAL.amplitude = GLOBAL.amplitude/2
-        end
-    end
-    if key == "0" then
+    end,
+    ["up"] = function ()
+        GLOBAL.amplitude = GLOBAL.amplitude*2
+    end,
+    ["down"] = function ()
+        GLOBAL.amplitude = GLOBAL.amplitude/2
+    end,
+    ["."] = function ()
+        GLOBAL.amplitude = GLOBAL.amplitude*2
+    end,
+    [","] = function ()
+        GLOBAL.amplitude = GLOBAL.amplitude/2
+    end,
+    ["0"] = function ()
         current_screen = screens.osc
-    end
-    if key == "1" then
+    end,
+    ["1"] = function ()
         current_screen = screens.spec
-    end
-    if key == "2" then
+    end,
+    ["2"] = function ()
         current_screen = screens.bars
-    end
-    if key == "3" then
+    end,
+    ["3"] = function ()
         current_screen = screens.boxes
-    end
-
-    if key == "space" then
-        GLOBAL.beat.playing = not GLOBAL.beat.playing
-    end
-
-    if key == "[" then
+    end,
+    ["m"] = function ()
+        cap_ctl:push("mono")
+    end,
+    ["r"] = function ()
+        recording = not recording
+        cap_ctl:push("rec")
+    end,
+    ["["] = function ()
         set_recording_device(recording_device_index-1)
-    end
-    if key == "]" then
+    end,
+    ["]"] = function ()
         set_recording_device(recording_device_index+1)
-    end
-
-    if key == "i" then
+    end,
+    ["s"] = function ()
         local old_color_A = color_A
         local old_color_B = color_B
         color_A = old_color_B
         color_B = old_color_A
         update_colors()
+    end,
+    ["i"] = function ()
+        color_A = colors.get_invert(color_A)
+        color_B = colors.get_invert(color_B)
+        update_colors()
+    end,
+    ["b"] = function ()
+        color_A = colors.black
+        color_B = colors.white
+        update_colors()
+    end,
+    ["w"] = function ()
+        color_A = colors.white
+        color_B = colors.black
+        update_colors()
+    end,
+    ["space"] = function ()
+        color_A = colors.random_color()
+        color_B = colors.get_invert(color_A)
+        update_colors()
     end
+}
+
+function love.keypressed( key, scancode, isrepeat )
+    if keymap[key] == nil then
+        return
+    end
+    keymap[key]()
 end
 
-function love.keyreleased(key)
-    local tempo_released = key == "t"
-    if tempo_released then 
-        set_tempo()
-    end
+function love.quit()
+    cap_ctl:push("quit")
+    capture_thread:wait()
 end

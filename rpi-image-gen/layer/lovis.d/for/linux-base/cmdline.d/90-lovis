@@ -1,0 +1,1 @@
+-console=* -fsck.repair=* console=tty3 ro fsck.mode=skip noswap fastboot quiet loglevel=0 logo.nologo vt.global_cursor_default=0 consoleblank=0 systemd.show_status=0 init=/usr/local/sbin/overlay-init

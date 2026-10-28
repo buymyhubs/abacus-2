@@ -1,0 +1,9 @@
+ACTION=="remove", GOTO="lovis_end"
+SUBSYSTEM!="block", GOTO="lovis_end"
+ENV{ID_BUS}!="usb", GOTO="lovis_end"
+ENV{ID_FS_USAGE}!="filesystem", GOTO="lovis_end"
+
+ENV{DEVTYPE}=="partition", TAG+="systemd", ENV{SYSTEMD_WANTS}+="lovis-usb@%k.service"
+ENV{DEVTYPE}=="disk", ENV{ID_PART_TABLE_TYPE}=="", TAG+="systemd", ENV{SYSTEMD_WANTS}+="lovis-usb@%k.service"
+
+LABEL="lovis_end"

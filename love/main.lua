@@ -17,11 +17,11 @@ GLOBAL.beat.playing = false
 local hop_size = GLOBAL.FFT.size/8
 GLOBAL.sample.buffer = {}
 GLOBAL.sample.buffer_count = 0
+GLOBAL.recording = false
 
 local recording_devices = love.audio.getRecordingDevices()
 local recording_device_index = 1
 local recording_device_count = #recording_devices
-local recording = false
 local cap_ctl = love.thread.getChannel("cap_ctl")
 local viz = love.thread.getChannel("viz")
 local capture_thread = love.thread.newThread("capture.lua")
@@ -30,7 +30,7 @@ capture_thread:start(44100, 2)
 local function set_recording_device(index)
     if index == nil or index < 1 or index > recording_device_count then return end
     recording_device_index = index
-    recording = false
+    GLOBAL.recording = false
     cap_ctl:push(index)
 end
 local window_data = love.sound.newSoundData(GLOBAL.FFT.size, 44100, 16, 1)
@@ -41,12 +41,13 @@ loveFFT:init(GLOBAL.FFT.size)
 local colors = require("colors")
 
 local screens = {
+    status = require("screens.status"),
     bars = require("screens.bars"),
     spec = require("screens.spec"),
     osc = require("screens.osc"),
     boxes = require("screens.boxes")
 }
-local current_screen = screens.bars
+local current_screen = screens.status
 
 local canvas
 function love.resize()
@@ -54,6 +55,7 @@ function love.resize()
     GLOBAL.screen_width, GLOBAL.screen_height = love.graphics.getDimensions()
 end
 love.resize()
+print(GLOBAL.screen_width)
 local color_shader = love.graphics.newShader [[
         uniform vec4 color_A;
         uniform vec4 color_B;
@@ -169,7 +171,7 @@ function love.draw()
     love.graphics.setShader(color_shader)
     love.graphics.draw(canvas)
     love.graphics.setShader()
-    love.graphics.print(tostring("FOR RESEARCH PURPOSES ONLY. DEVICE: "..recording_devices[recording_device_index]:getName()..(GLOBAL.sample.channels == 2 and " STEREO" or " MONO")..(recording and " REC" or "").." AMPLITUDE: "..GLOBAL.amplitude.." BEAT TRIGGERED: "..bool_to_string(GLOBAL.beat.triggered).." TEMPO: "..GLOBAL.beat.tempo.." FPS: "..love.timer.getFPS()), 0, 0)
+    love.graphics.print(tostring("FOR RESEARCH PURPOSES ONLY. DEVICE: "..recording_devices[recording_device_index]:getName()..(GLOBAL.sample.channels == 2 and " STEREO" or " MONO")..(GLOBAL.recording and " REC" or "").." AMPLITUDE: "..GLOBAL.amplitude.." BEAT TRIGGERED: "..bool_to_string(GLOBAL.beat.triggered).." TEMPO: "..GLOBAL.beat.tempo.." FPS: "..love.timer.getFPS()), 0, 0)
 end
 
 local keymap = {
@@ -192,22 +194,25 @@ local keymap = {
         GLOBAL.amplitude = GLOBAL.amplitude/2
     end,
     ["0"] = function ()
-        current_screen = screens.osc
+        current_screen = screens.status
     end,
     ["1"] = function ()
-        current_screen = screens.spec
+        current_screen = screens.osc
     end,
     ["2"] = function ()
-        current_screen = screens.bars
+        current_screen = screens.spec
     end,
     ["3"] = function ()
+        current_screen = screens.bars
+    end,
+    ["4"] = function ()
         current_screen = screens.boxes
     end,
     ["m"] = function ()
         cap_ctl:push("mono")
     end,
     ["r"] = function ()
-        recording = not recording
+        GLOBAL.recording = not GLOBAL.recording
         cap_ctl:push("rec")
     end,
     ["["] = function ()

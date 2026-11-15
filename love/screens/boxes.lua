@@ -13,7 +13,7 @@ function boxes.draw()
                 level = level + GLOBAL.FFT.result[j]*j
             end
         end
-        level = level*GLOBAL.amplitude/100
+        level = level*GLOBAL.amplitude/300 * i
         love.graphics.setColor(level,level,level)
         love.graphics.rectangle("fill", (i - 1) * box_width, 0, box_width, GLOBAL.screen_height)
         love.graphics.setColor(1,1,1,1)

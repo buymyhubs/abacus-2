@@ -84,8 +84,21 @@ local function set_tempo(new_tempo)
     time_per_beat = GLOBAL.beat.tempo/60/GLOBAL.beat.division
 end
 set_tempo()
+
+local kick_release = 0.250
+local active_kick = 0
+local function kick()
+    print("kick!")
+
+    active_kick = kick_release
+        color_A = colors.random_color()
+        color_B = colors.get_invert(color_A)
+        update_colors()
+end
+
 local sure = false
 local keys_pressed = {}
+local unpack = table.unpack or unpack
 function love.update(dt)
     sure = false
     keys_pressed = {}
@@ -151,6 +164,25 @@ function love.update(dt)
     end
 
     -- testing out kick detection
+    if active_kick > 0 then
+        active_kick = active_kick - dt
+        print(active_kick)
+    else
+        active_kick = 0
+        local lowbands = {unpack(GLOBAL.FFT.result, 1, GLOBAL.FFT.size/8)}
+        local loudest_low = 0
+        if lowbands and #lowbands > 0 then
+        for i = 1, #lowbands do
+                if lowbands[i] > loudest_low then
+                    loudest_low = lowbands[i]
+                end
+            end
+        end
+        if loudest_low * GLOBAL.amplitude > 1 then
+            kick()
+        end
+    end
+
 
     if love.timer.getTime() % 5 < dt then
         local gc_count = collectgarbage()

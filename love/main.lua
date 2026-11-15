@@ -89,17 +89,17 @@ local keys_pressed = {}
 function love.update(dt)
     sure = false
     keys_pressed = {}
-    if GLOBAL.beat.triggered then
-        GLOBAL.beat.triggered = false
-    end
-    if GLOBAL.transient.triggered then
-        GLOBAL.beat.triggered = false
-    end
-    time_since_beat = time_since_beat + dt
-    if time_since_beat >= time_per_beat then
-        GLOBAL.beat.triggered = true
-        time_since_beat = time_since_beat - time_per_beat
-    end
+    -- if GLOBAL.beat.triggered then
+    --     GLOBAL.beat.triggered = false
+    -- end
+    -- if GLOBAL.transient.triggered then
+    --     GLOBAL.beat.triggered = false
+    -- end
+    -- time_since_beat = time_since_beat + dt
+    -- if time_since_beat >= time_per_beat then
+    --     GLOBAL.beat.triggered = true
+    --     time_since_beat = time_since_beat - time_per_beat
+    -- end
     local newResult, updated = loveFFT:get()
     if updated then
         GLOBAL.FFT.result = newResult
@@ -149,6 +149,9 @@ function love.update(dt)
         end
         GLOBAL.sample.buffer_count = remaining
     end
+
+    -- testing out kick detection
+
     if love.timer.getTime() % 5 < dt then
         local gc_count = collectgarbage()
         if debug_mode then print("collecting garbage:", gc_count) end

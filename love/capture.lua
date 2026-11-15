@@ -2,6 +2,8 @@ local rate, channels = ...
 require("love.audio"); require("love.sound"); require("love.timer"); require("love.data")
 local ffi = require("ffi")
 
+
+ffi.cdef[[ void sync(void); ]]
 local ctl = love.thread.getChannel("cap_ctl")
 local viz = love.thread.getChannel("viz")
 local devices = love.audio.getRecordingDevices()
@@ -10,6 +12,12 @@ local mono = false
 local file_n = 0
 
 local function u32(n) return love.data.pack("string", "<I4", n) end
+
+local function sync_fs()
+    ffi.C.sync()
+    -- os command just in case? idk
+    os.execute("sync")
+end
 
 local function open_device(i)
     if dev then dev:stop() end
@@ -45,6 +53,7 @@ local function stop_recording()
     file:seek("set", 40); file:write(u32(bytes))
     file:close()
     file = nil
+    sync_fs()
 end
 
 open_device(1)

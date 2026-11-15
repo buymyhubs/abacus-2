@@ -8,12 +8,8 @@
       "program": {
         "command": "love"
       },
-      "args": [
-        "src"
-      ],
-      "scriptRoots": [
-        "src"
-      ]
+      "args": ["love"],
+      "scriptRoots": ["love"]
     }
   ]
 }

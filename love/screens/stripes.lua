@@ -18,7 +18,7 @@ function stripes.draw()
     love.graphics.push()
     love.graphics.translate(GLOBAL.screen_width/2, GLOBAL.screen_height/2)
     love.graphics.rotate(GLOBAL.bump*4-3)
-    love.graphics.scale(2)
+    love.graphics.scale(4)
     love.graphics.translate(-GLOBAL.screen_width/2, -GLOBAL.screen_height/2)
     love.graphics.translate( 0, -line_width*2 )
     if #points >= 1 then

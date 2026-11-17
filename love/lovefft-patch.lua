@@ -1,4 +1,4 @@
-local loveFFT = require("lovefft")
+local loveFFT = require("libs.lovefft")
 function loveFFT:get()
     local latest
     while self.channelFFT:getCount() > 0 do latest = self.channelFFT:pop() end

@@ -1,35 +1,32 @@
 local stripes = {}
 
 function stripes.draw()
-    love.graphics.setLineWidth(5)
+    local line_width = 10*GLOBAL.bump+10
+
+    love.graphics.setLineWidth(line_width)
     local points = {}
-    for i = 1, GLOBAL.FFT.size do
-        local y = (GLOBAL.FFT.result[i] or 0) * GLOBAL.screen_height * GLOBAL.amplitude
-        table.insert(points, i*(GLOBAL.screen_width/GLOBAL.FFT.size))
+    local display_samples = math.min(GLOBAL.sample.buffer_count, GLOBAL.FFT.size)
+    local sample_pixels = GLOBAL.screen_width / display_samples
+
+    for i = 1, display_samples do
+        local x = (i - 1) * sample_pixels
+        local y = -(GLOBAL.sample.buffer[i] or 0) * (GLOBAL.screen_height / 2) * GLOBAL.amplitude/100
+        table.insert(points, x)
         table.insert(points, y)
     end
+
     love.graphics.push()
-    love.graphics.scale(2,2)
-    love.graphics.translate(-GLOBAL.screen_width/4,-GLOBAL.screen_height/4)
-    love.graphics.push()
-    love.graphics.translate(GLOBAL.screen_width/2,GLOBAL.screen_height/2)
-    love.graphics.scale(1,-1)    
-    love.graphics.line(points)
-    love.graphics.pop()
-    love.graphics.push()
-    love.graphics.translate(GLOBAL.screen_width/2,GLOBAL.screen_height/2)
-    love.graphics.line(points)
-    love.graphics.pop()
-    love.graphics.push()
-    love.graphics.translate(GLOBAL.screen_width/2,GLOBAL.screen_height/2)
-    love.graphics.scale(-1,-1)    
-    love.graphics.line(points)
-    love.graphics.pop()
-    love.graphics.push()
-    love.graphics.translate(GLOBAL.screen_width/2,GLOBAL.screen_height/2)
-    love.graphics.scale(-1,1)    
-    love.graphics.line(points)
-    love.graphics.pop()
+    love.graphics.translate(GLOBAL.screen_width/2, GLOBAL.screen_height/2)
+    love.graphics.rotate(GLOBAL.bump*4-3)
+    love.graphics.scale(2)
+    love.graphics.translate(-GLOBAL.screen_width/2, -GLOBAL.screen_height/2)
+    love.graphics.translate( 0, -line_width*2 )
+    if #points >= 1 then
+        for i = 1, GLOBAL.screen_height/line_width/2 do
+            love.graphics.line(points)
+            love.graphics.translate( 0, line_width*2 )
+        end
+    end
     love.graphics.pop()
 end
 

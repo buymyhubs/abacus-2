@@ -12,7 +12,9 @@ GLOBAL.FFT.result = {}
 GLOBAL.amplitude = 100
 GLOBAL.kick_enabled = false
 GLOBAL.kick_active = false
-GLOBAL.kick_sensitivity = 0.1
+GLOBAL.bump = 1
+local default_kick_sensitivity = 0.25
+GLOBAL.kick_sensitivity = default_kick_sensitivity
 GLOBAL.transient.threshold = 1
 GLOBAL.transient.triggered = false
 GLOBAL.beat.tempo = 120
@@ -51,6 +53,7 @@ local screens = {
     spec = require("screens.spec"),
     osc = require("screens.osc"),
     boxes = require("screens.boxes"),
+    stripes = require("screens.stripes"),
     -- kick = require("screens.kick")
 }
 local current_screen = screens.status
@@ -99,7 +102,7 @@ set_tempo()
 
 local kick_release = 0.40
 local active_kick = 0
-local prev_loudest_low = 0
+local prev_loudness_low = 0
 
 local function kick()
     -- print("kick!")
@@ -110,6 +113,7 @@ local function kick()
     color_B = colors.get_invert(color_A)
     update_colors()
         
+    GLOBAL.bump = math.random()
     local randomIndex = math.random(1, #screen_keys)
     current_screen = screens[screen_keys[randomIndex]]
 end
@@ -119,19 +123,22 @@ local function detect_kick(dt)
         active_kick = active_kick - dt
     else
         active_kick = 0
-        local lowbands = {unpack(GLOBAL.FFT.result, 1, GLOBAL.FFT.size/8)}
-        local loudest_low = 0
+        local lowbands = {unpack(GLOBAL.FFT.result, 1, GLOBAL.FFT.size/5)}
+        local loudness_low = 0
         if lowbands and #lowbands > 0 then
         for i = 1, #lowbands do
-                if lowbands[i] > loudest_low then
-                    loudest_low = lowbands[i]
-                end
+                -- if lowbands[i] > loudest_low then
+                    loudness_low = loudness_low + lowbands[i]
+                -- end
             end
         end
-        if loudest_low > GLOBAL.kick_sensitivity and loudest_low-prev_loudest_low > loudest_low*0.3 then
+        loudness_low = loudness_low/#lowbands
+        local percentage = loudness_low*GLOBAL.kick_sensitivity
+        local difference = loudness_low-prev_loudness_low
+        if difference > percentage then
             kick()
         end
-        prev_loudest_low = loudest_low
+        prev_loudness_low = loudness_low
     end
 end
 
@@ -230,7 +237,9 @@ function love.draw()
     love.graphics.setShader(color_shader)
     love.graphics.draw(canvas)
     love.graphics.setShader()
-    love.graphics.print(tostring("FOR RESEARCH PURPOSES ONLY. DEVICE: "..recording_devices[recording_device_index]:getName()..(GLOBAL.sample.channels == 2 and " STEREO" or " MONO")..(GLOBAL.recording and " REC" or "").." AMPLITUDE: "..GLOBAL.amplitude.." BEAT TRIGGERED: "..bool_to_string(GLOBAL.beat.triggered).." TEMPO: "..GLOBAL.beat.tempo.." FPS: "..love.timer.getFPS()), 0, 0)
+    if debug_mode then
+        love.graphics.print(tostring("FOR RESEARCH PURPOSES ONLY. DEVICE: "..recording_devices[recording_device_index]:getName()..(GLOBAL.sample.channels == 2 and " STEREO" or " MONO")..(GLOBAL.recording and " REC" or "").." AMPLITUDE: "..GLOBAL.amplitude.." BEAT TRIGGERED: "..bool_to_string(GLOBAL.beat.triggered).." KICK SENSITITVITY: "..GLOBAL.kick_sensitivity.." FPS: "..love.timer.getFPS()), 0, 0)
+    end
 end
 
 local keymap = {
@@ -241,10 +250,10 @@ local keymap = {
         love.event.quit()
     end,
     ["up"] = function ()
-        GLOBAL.kick_sensitivity = GLOBAL.kick_sensitivity+0.01
+        GLOBAL.kick_sensitivity = GLOBAL.kick_sensitivity+0.05
     end,
     ["down"] = function ()
-        GLOBAL.kick_sensitivity = GLOBAL.kick_sensitivity-0.01
+        GLOBAL.kick_sensitivity = GLOBAL.kick_sensitivity-0.05
     end,
     ["."] = function ()
         GLOBAL.amplitude = GLOBAL.amplitude*2
@@ -310,6 +319,9 @@ local keymap = {
     end,
     ["space"] = function ()
         kick()
+    end,
+    ["/"] = function ()
+        GLOBAL.kick_sensitivity = default_kick_sensitivity
     end
 }
 

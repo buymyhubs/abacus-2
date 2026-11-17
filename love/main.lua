@@ -4,11 +4,13 @@ if os.getenv("LOCAL_LUA_DEBUGGER_VSCODE") == "1" then
   require("lldebugger").start()
   debug_mode = true
 end
+local unpack = table.unpack or unpack
 math.randomseed(os.time())
 GLOBAL = {FFT={},sample={},transient={},beat={}}
 GLOBAL.FFT.size = 1024
 GLOBAL.FFT.result = {}
 GLOBAL.amplitude = 100
+GLOBAL.kick_enabled = false
 GLOBAL.kick_active = false
 GLOBAL.kick_sensitivity = 0.1
 GLOBAL.transient.threshold = 1
@@ -98,8 +100,9 @@ set_tempo()
 local kick_release = 0.40
 local active_kick = 0
 local prev_loudest_low = 0
+
 local function kick()
-    print("kick!")
+    -- print("kick!")
     GLOBAL.kick_active = true
 
     active_kick = kick_release
@@ -111,9 +114,30 @@ local function kick()
     current_screen = screens[screen_keys[randomIndex]]
 end
 
+local function detect_kick(dt)
+    if active_kick > 0 then
+        active_kick = active_kick - dt
+    else
+        active_kick = 0
+        local lowbands = {unpack(GLOBAL.FFT.result, 1, GLOBAL.FFT.size/8)}
+        local loudest_low = 0
+        if lowbands and #lowbands > 0 then
+        for i = 1, #lowbands do
+                if lowbands[i] > loudest_low then
+                    loudest_low = lowbands[i]
+                end
+            end
+        end
+        if loudest_low > GLOBAL.kick_sensitivity and loudest_low-prev_loudest_low > loudest_low*0.3 then
+            kick()
+        end
+        prev_loudest_low = loudest_low
+    end
+end
+
+
 local sure = false
 local keys_pressed = {}
-local unpack = table.unpack or unpack
 function love.update(dt)
     sure = false
     keys_pressed = {}
@@ -180,25 +204,9 @@ function love.update(dt)
 
     GLOBAL.kick_active = false
     -- testing out kick detection
-    if active_kick > 0 then
-        active_kick = active_kick - dt
-    else
-        active_kick = 0
-        local lowbands = {unpack(GLOBAL.FFT.result, 1, GLOBAL.FFT.size/5)}
-        local loudest_low = 0
-        if lowbands and #lowbands > 0 then
-        for i = 1, #lowbands do
-                if lowbands[i] > loudest_low then
-                    loudest_low = lowbands[i]
-                end
-            end
-        end
-        if loudest_low > GLOBAL.kick_sensitivity and loudest_low-prev_loudest_low > loudest_low*0.3 then
-            kick()
-        end
-        prev_loudest_low = loudest_low
+    if GLOBAL.kick_enabled then
+        detect_kick(dt)
     end
-
 
     if love.timer.getTime() % 5 < dt then
         local gc_count = collectgarbage()
@@ -260,7 +268,7 @@ local keymap = {
         current_screen = screens.boxes
     end,
     ["9"] = function ()
-        current_screen = screens.kick
+        -- current_screen = screens.kick
     end,
     ["m"] = function ()
         cap_ctl:push("mono")
@@ -297,10 +305,11 @@ local keymap = {
         color_B = colors.black
         update_colors()
     end,
+    ["k"] = function ()
+        GLOBAL.kick_enabled = not GLOBAL.kick_enabled
+    end,
     ["space"] = function ()
-        color_A = colors.random_color()
-        color_B = colors.get_invert(color_A)
-        update_colors()
+        kick()
     end
 }
 

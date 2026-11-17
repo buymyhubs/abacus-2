@@ -11,7 +11,7 @@ function osc.draw()
 
     for i = 1, display_samples do
         local x = (i - 1) * sample_pixels
-        local y = -(GLOBAL.sample.buffer[i] or 0) * (GLOBAL.screen_height / 2) * GLOBAL.amplitude/100
+        local y = -(GLOBAL.sample.buffer[i] or 0) * (GLOBAL.screen_height / 2) * GLOBAL.amplitude/10
         table.insert(points, x)
         table.insert(points, y)
     end

@@ -9,11 +9,14 @@ math.randomseed(os.time())
 GLOBAL = {FFT={},sample={},transient={},beat={}}
 GLOBAL.FFT.size = 1024
 GLOBAL.FFT.result = {}
-GLOBAL.amplitude = 100
-GLOBAL.kick_enabled = false
+GLOBAL.amplitude = 10
+GLOBAL.kick_detection_enabled = true
+GLOBAL.kick_color_enabled = false
+GLOBAL.kick_screen_enabled = false
+GLOBAL.kick_bump_enabled = true
 GLOBAL.kick_active = false
 GLOBAL.bump = 1
-local default_kick_sensitivity = 0.25
+local default_kick_sensitivity = 3
 GLOBAL.kick_sensitivity = default_kick_sensitivity
 GLOBAL.transient.threshold = 1
 GLOBAL.transient.triggered = false
@@ -100,46 +103,63 @@ local function set_tempo(new_tempo)
 end
 set_tempo()
 
-local kick_release = 0.40
+local kick_release = 0.500
 local active_kick = 0
 local prev_loudness_low = 0
+local kick_lo, kick_hi = 1, 4
+local flux_size = 43
+local flux_history = {}
+local flux_index = 0
+local flux_sum = 0
+local min_flux = 0.01
 
 local function kick()
     -- print("kick!")
     GLOBAL.kick_active = true
-
     active_kick = kick_release
-    color_A = colors.random_color()
-    color_B = colors.get_invert(color_A)
-    update_colors()
-        
-    GLOBAL.bump = math.random()
-    local randomIndex = math.random(1, #screen_keys)
-    current_screen = screens[screen_keys[randomIndex]]
+
+    if GLOBAL.kick_color_enabled then
+        color_A = colors.random_color()
+        color_B = colors.get_invert(color_A)
+        update_colors()
+    end
+
+    if GLOBAL.kick_bump_enabled then
+        GLOBAL.bump = math.random()
+    end
+    if GLOBAL.kick_screen_enabled then
+        local randomIndex = math.random(1, #screen_keys)
+        current_screen = screens[screen_keys[randomIndex]]
+    end
+end
+
+
+local function low_energy()
+    local sum = 0
+    local result = GLOBAL.FFT.result
+    for i = kick_lo, kick_hi do
+        sum = sum + (result[i] or 0)
+    end
+    return sum / (kick_hi - kick_lo + 1)
 end
 
 local function detect_kick(dt)
+    local low = low_energy()
+    local flux = math.max(0, low - prev_loudness_low)
+    prev_loudness_low = low
+
+    local count = #flux_history
+    local mean = count > 0 and flux_sum / count or 0
+
     if active_kick > 0 then
         active_kick = active_kick - dt
-    else
-        active_kick = 0
-        local lowbands = {unpack(GLOBAL.FFT.result, 1, GLOBAL.FFT.size/5)}
-        local loudness_low = 0
-        if lowbands and #lowbands > 0 then
-        for i = 1, #lowbands do
-                -- if lowbands[i] > loudest_low then
-                    loudness_low = loudness_low + lowbands[i]
-                -- end
-            end
-        end
-        loudness_low = loudness_low/#lowbands
-        local percentage = loudness_low*GLOBAL.kick_sensitivity
-        local difference = loudness_low-prev_loudness_low
-        if difference > percentage then
-            kick()
-        end
-        prev_loudness_low = loudness_low
+    elseif flux > min_flux and flux > mean * GLOBAL.kick_sensitivity then
+        kick()
     end
+
+    flux_index = flux_index % flux_size + 1
+    flux_sum = flux_sum - (flux_history[flux_index] or 0) + flux
+    flux_history[flux_index] = flux
 end
 
 
@@ -211,7 +231,7 @@ function love.update(dt)
 
     GLOBAL.kick_active = false
     -- testing out kick detection
-    if GLOBAL.kick_enabled then
+    if GLOBAL.kick_detection_enabled then
         detect_kick(dt)
     end
 
@@ -250,10 +270,10 @@ local keymap = {
         love.event.quit()
     end,
     ["up"] = function ()
-        GLOBAL.kick_sensitivity = GLOBAL.kick_sensitivity+0.05
+        GLOBAL.kick_sensitivity = GLOBAL.kick_sensitivity*2
     end,
     ["down"] = function ()
-        GLOBAL.kick_sensitivity = GLOBAL.kick_sensitivity-0.05
+        GLOBAL.kick_sensitivity = GLOBAL.kick_sensitivity/2
     end,
     ["."] = function ()
         GLOBAL.amplitude = GLOBAL.amplitude*2
@@ -276,8 +296,8 @@ local keymap = {
     ["4"] = function ()
         current_screen = screens.boxes
     end,
-    ["9"] = function ()
-        -- current_screen = screens.kick
+    ["5"] = function ()
+        current_screen = screens.stripes
     end,
     ["m"] = function ()
         cap_ctl:push("mono")
@@ -293,20 +313,27 @@ local keymap = {
         set_recording_device(recording_device_index+1)
     end,
     ["s"] = function ()
-        local old_color_A = color_A
-        local old_color_B = color_B
-        color_A = old_color_B
-        color_B = old_color_A
-        update_colors()
+        GLOBAL.kick_screen_enabled = not GLOBAL.kick_screen_enabled
     end,
+    ["c"] = function ()
+        GLOBAL.kick_color_enabled = not GLOBAL.kick_color_enabled
+    end,
+    ["b"] = function ()
+        GLOBAL.kick_bump_enabled = not GLOBAL.kick_bump_enabled
+    end,
+    ["a"] = function ()
+        GLOBAL.kick_bump_enabled = true
+        GLOBAL.kick_color_enabled = true
+        GLOBAL.kick_screen_enabled = true
+    end,
+    ["o"] = function ()
+        GLOBAL.kick_bump_enabled = false
+        GLOBAL.kick_color_enabled = false
+        GLOBAL.kick_screen_enabled = false
+    end,       
     ["i"] = function ()
         color_A = colors.get_invert(color_A)
         color_B = colors.get_invert(color_B)
-        update_colors()
-    end,
-    ["b"] = function ()
-        color_A = colors.black
-        color_B = colors.white
         update_colors()
     end,
     ["w"] = function ()
@@ -315,7 +342,7 @@ local keymap = {
         update_colors()
     end,
     ["k"] = function ()
-        GLOBAL.kick_enabled = not GLOBAL.kick_enabled
+        GLOBAL.kick_detection_enabled = not GLOBAL.kick_detection_enabled
     end,
     ["space"] = function ()
         kick()

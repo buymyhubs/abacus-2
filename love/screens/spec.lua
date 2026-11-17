@@ -1,7 +1,7 @@
 local spec = {}
 
 function spec.draw()
-    love.graphics.setLineWidth(5)
+    love.graphics.setLineWidth(3)
     local points = {}
     for i = 1, GLOBAL.FFT.size do
         local y = (GLOBAL.FFT.result[i] or 0) * GLOBAL.screen_height * GLOBAL.amplitude/2 * i

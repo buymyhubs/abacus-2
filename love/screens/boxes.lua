@@ -1,6 +1,6 @@
 local boxes = {}
 
-local box_count = 8
+local box_count = 6
 
 function boxes.draw()
     local box_width = GLOBAL.screen_width / box_count

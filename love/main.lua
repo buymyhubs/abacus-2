@@ -5,17 +5,21 @@ if os.getenv("LOCAL_LUA_DEBUGGER_VSCODE") == "1" then
   debug_mode = true
 end
 local unpack = table.unpack or unpack
-math.randomseed(os.time())
 GLOBAL = {FFT={},sample={},transient={},beat={}}
 GLOBAL.FFT.size = 1024
 GLOBAL.FFT.result = {}
 GLOBAL.amplitude = 10
+GLOBAL.sample.peak = 0
 GLOBAL.kick_detection_enabled = true
 GLOBAL.kick_color_enabled = false
 GLOBAL.kick_screen_enabled = false
 GLOBAL.kick_bump_enabled = true
 GLOBAL.kick_active = false
+
+-- random value between 0 and 1 that changes on each kick detection
 GLOBAL.bump = 1
+GLOBAL.bump_triggered = false
+
 local default_kick_sensitivity = 3
 GLOBAL.kick_sensitivity = default_kick_sensitivity
 GLOBAL.transient.threshold = 1
@@ -57,6 +61,7 @@ local screens = {
     osc = require("screens.osc"),
     boxes = require("screens.boxes"),
     stripes = require("screens.stripes"),
+    squiggle = require("screens.squiggle")
     -- kick = require("screens.kick")
 }
 local current_screen = screens.status
@@ -126,6 +131,7 @@ local function kick()
 
     if GLOBAL.kick_bump_enabled then
         GLOBAL.bump = math.random()
+        GLOBAL.bump_triggered = true
     end
     if GLOBAL.kick_screen_enabled then
         local randomIndex = math.random(1, #screen_keys)
@@ -144,9 +150,9 @@ local function low_energy()
 end
 
 local function detect_kick(dt)
-    local low = low_energy()
-    local flux = math.max(0, low - prev_loudness_low)
-    prev_loudness_low = low
+    GLOBAL.sample.low_energy = low_energy()
+    local flux = math.max(0, GLOBAL.sample.low_energy - prev_loudness_low)
+    prev_loudness_low = GLOBAL.sample.low_energy
 
     local count = #flux_history
     local mean = count > 0 and flux_sum / count or 0
@@ -168,6 +174,7 @@ local keys_pressed = {}
 function love.update(dt)
     sure = false
     keys_pressed = {}
+    GLOBAL.bump_triggered = false
     -- if GLOBAL.beat.triggered then
     --     GLOBAL.beat.triggered = false
     -- end
@@ -188,11 +195,11 @@ function love.update(dt)
     if err then error(err) end
 
     local stream_data = viz:pop()
+    GLOBAL.sample.peak = 0
     while stream_data do
         local count = stream_data:getSampleCount()
         local channels = stream_data:getChannelCount()
         GLOBAL.sample.channels = channels
-
         for i = 0, count - 1 do
             local s = 0
             for c = 1, channels do
@@ -258,7 +265,7 @@ function love.draw()
     love.graphics.draw(canvas)
     love.graphics.setShader()
     if debug_mode then
-        love.graphics.print(tostring("FOR RESEARCH PURPOSES ONLY. DEVICE: "..recording_devices[recording_device_index]:getName()..(GLOBAL.sample.channels == 2 and " STEREO" or " MONO")..(GLOBAL.recording and " REC" or "").." AMPLITUDE: "..GLOBAL.amplitude.." BEAT TRIGGERED: "..bool_to_string(GLOBAL.beat.triggered).." KICK SENSITITVITY: "..GLOBAL.kick_sensitivity.." FPS: "..love.timer.getFPS()), 0, 0)
+        love.graphics.print(tostring("FOR RESEARCH PURPOSES ONLY. DEVICE: "..recording_devices[recording_device_index]:getName()..(GLOBAL.sample.channels == 2 and " STEREO" or " MONO")..(GLOBAL.recording and " REC" or "").." AMPLITUDE: "..GLOBAL.amplitude.." LOW ENERGY: "..GLOBAL.sample.low_energy.." KICK SENSITITVITY: "..GLOBAL.kick_sensitivity.." FPS: "..love.timer.getFPS()), 0, 0)
     end
 end
 

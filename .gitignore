@@ -4,4 +4,6 @@
 *.flac
 *.ape
 *.opus
+._*
+fseventsd-uuid
 .DS_Store

@@ -1,2 +1,7 @@
 *.wav
+*.m4a
+*.mp3
+*.flac
+*.ape
+*.opus
 .DS_Store

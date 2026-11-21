@@ -76,6 +76,7 @@ local canvas
 function love.resize()
     canvas = love.graphics.newCanvas(GLOBAL.screen_width, GLOBAL.screen_height)
     GLOBAL.screen_width, GLOBAL.screen_height = love.graphics.getDimensions()
+    love.mouse.setVisible(false)
 end
 love.resize()
 print(GLOBAL.screen_width)

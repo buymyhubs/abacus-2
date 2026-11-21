@@ -8,7 +8,7 @@ function boxes.draw()
         local level = 0
         for j = GLOBAL.FFT.size/(box_count*4)*i-GLOBAL.FFT.size/(box_count*4)+1, GLOBAL.FFT.size/(box_count*4)*i do
             if GLOBAL.FFT.result[j] == nil then
-                print("nil")
+                -- print("nil")
             else
                 level = level + GLOBAL.FFT.result[j]*j
             end

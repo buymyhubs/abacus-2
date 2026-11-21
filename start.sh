@@ -7,5 +7,6 @@ for _ in $(seq 150); do
   sleep 0.2
 done
 
+sleep 2
 cd "$SCRIPT_DIR/recordings"
 love ../love

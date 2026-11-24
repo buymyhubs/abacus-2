@@ -6,7 +6,7 @@ After=dev-%i.device
 [Service]
 Type=simple
 Environment=HOME=/root SDL_VIDEODRIVER=kmsdrm LOVE_GRAPHICS_USE_OPENGLES=1
-ExecStart=/usr/local/sbin/lovis-usb start %I
-ExecStopPost=/usr/local/sbin/lovis-usb stop %I
+ExecStart=/usr/local/sbin/abacus-2-usb start %I
+ExecStopPost=/usr/local/sbin/abacus-2-usb stop %I
 KillMode=control-group
 TimeoutStopSec=5

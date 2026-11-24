@@ -7,3 +7,5 @@
 ._*
 fseventsd-uuid
 .DS_Store
+rpi-image-gen/build
+rpi-image-gen/work

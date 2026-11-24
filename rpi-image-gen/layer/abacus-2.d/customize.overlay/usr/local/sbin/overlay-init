@@ -11,7 +11,7 @@ fallback() {
 }
 
 case " $(cat /proc/cmdline) " in
-  *" lovis.rw=1 "*) mount -o remount,rw /; exec /sbin/init ;;
+  *" abacus-2.rw=1 "*) mount -o remount,rw /; exec /sbin/init ;;
 esac
 
 grep -qw overlay /proc/filesystems || modprobe overlay 2>/dev/null

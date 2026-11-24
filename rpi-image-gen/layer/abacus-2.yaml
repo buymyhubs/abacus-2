@@ -1,5 +1,5 @@
 # METABEGIN
-# X-Env-Layer-Name: lovis
+# X-Env-Layer-Name: abacus-2
 # X-Env-Layer-Category: app
 # X-Env-Layer-Desc: for research purposes only
 # X-Env-Layer-Version: 1.0.0
@@ -25,9 +25,11 @@ mmdebstrap:
     - ntfs-3g
     - dosfstools
     - kmod
+    - ffmpeg
+    - libgphoto2-6
   customize-hooks:
     - mkdir -p $1/overlay $1/mnt/usb
-    - chmod 755 $1/usr/local/sbin/overlay-init $1/usr/local/sbin/lovis-usb
+    - chmod 755 $1/usr/local/sbin/overlay-init $1/usr/local/sbin/abacus-2-usb
     - touch $1/root/.hushlogin
     - chroot $1 systemctl set-default multi-user.target
     - chroot $1 systemctl enable getty@tty1.service

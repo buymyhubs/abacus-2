@@ -4,11 +4,11 @@ ACTION=$1
 DEV=/dev/$2
 USB_SYNC=0
 SPLASH_HOLD=3
-ACTIVE=/run/lovis-active
+ACTIVE=/run/abacus-2-active
 
 case "$ACTION" in
 start)
-  exec 9>/run/lovis-usb.lock
+  exec 9>/run/abacus-2-usb.lock
   flock 9
   if mountpoint -q "$MNT"; then
     echo "$MNT already in use; ignoring $DEV"
